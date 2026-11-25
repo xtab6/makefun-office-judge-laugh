@@ -46,6 +46,14 @@ def main() -> int:
             os.fsync(dir_fd)
         finally:
             os.close(dir_fd)
+        # Validate the artifact on disk, not just the constant in memory:
+        # a corrupted or truncated write must fail the run, not ship.
+        with open(os.path.join(out_dir, "entry.txt"), "r", encoding="utf-8") as f:
+            written = f.read()
+        if written != line:
+            raise SystemExit("written entry differs from the line")
+        if not 1 <= len(written) <= 200 or "\n" in written or "\r" in written:
+            raise SystemExit("written entry fails the gate")
     except BaseException:
         try:
             os.remove(tmp)
